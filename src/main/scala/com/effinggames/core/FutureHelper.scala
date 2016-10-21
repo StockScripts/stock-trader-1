@@ -1,5 +1,7 @@
 package com.effinggames.core
 
+import com.effinggames.core.LoggerHelper._
+
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.Try
@@ -8,7 +10,6 @@ object FutureHelper {
   /**
     * Takes a list of elements and maps it to a future generating function.
     * Executes the futures sequentially, e.g. the sequential version of Future.traverse()
-    *
     * @param list List of elements to be iterated over.
     * @param fn Iterator function that returns a Future.
     * @return Return a future
@@ -41,5 +42,18 @@ object FutureHelper {
     val promise = Promise[Try[A]]()
     future.onComplete(promise.success)
     promise.future
+  }
+
+  implicit class FutureWithFailureLogging[A](self: Future[A])(implicit ec: ExecutionContext) {
+    /**
+      * Adds a logger warn on future failure.
+      * @return Returns the future.
+      */
+    def withLogFailure: Future[A] = {
+      self.onFailure {
+        case err => logger.warn(s"Future failed - $err")
+      }
+      self
+    }
   }
 }

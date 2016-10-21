@@ -1,6 +1,7 @@
 package com.effinggames.modules.download
 
 import com.effinggames.core.{Module, FutureHelper, LoggerHelper, DatabaseHelper}
+import com.effinggames.core.FutureHelper._
 import DatabaseHelper.stockDB
 import LoggerHelper.logger
 import org.apache.commons.io.{Charsets, IOUtils}
@@ -18,12 +19,12 @@ object DownloadModule extends Module {
   def run(params: Seq[String]): Future[Unit] = async {
     params.head match {
       case "all" =>
-        await(fetchStocks())
-        await(parseUserLists())
+        await(fetchStocks().withLogFailure)
+        await(parseUserLists().withLogFailure)
       case "stocks" =>
-        await(fetchStocks())
+        await(fetchStocks().withLogFailure)
       case "userLists" =>
-        await(parseUserLists())
+        await(parseUserLists().withLogFailure)
     }
   }
 
@@ -40,7 +41,7 @@ object DownloadModule extends Module {
       .toVector
 
     await(FutureHelper.traverseSequential(fileNames)( fileName => {
-      StockFetcher.downloadStocksFromResourceFile(s"$stockListDirectory$fileName")
+      StockFetcher.downloadStocksFromResourceFile(s"$stockListDirectory$fileName").withLogFailure
     }))
   }
 
@@ -54,7 +55,7 @@ object DownloadModule extends Module {
       .toVector
 
     await(FutureHelper.traverseSequential(fileNames)( fileName => {
-      UserListParser.parseUserListFromResourceFile(s"$userListDirectory$fileName")
+      UserListParser.parseUserListFromResourceFile(s"$userListDirectory$fileName").withLogFailure
     }))
   }
 }
