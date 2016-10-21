@@ -38,6 +38,7 @@ object DownloadModule extends Module {
     val fileNames = IOUtils.readLines(getClass.getResourceAsStream(stockListDirectory), Charsets.UTF_8)
       .filter(isCorrectFormat)
       .toVector
+
     await(FutureHelper.traverseSequential(fileNames)( fileName => {
       StockFetcher.downloadStocksFromResourceFile(s"$stockListDirectory$fileName")
     }))
@@ -51,6 +52,7 @@ object DownloadModule extends Module {
     val fileNames = IOUtils.readLines(getClass.getResourceAsStream(userListDirectory), Charsets.UTF_8)
       .filter(isCorrectFormat)
       .toVector
+
     await(FutureHelper.traverseSequential(fileNames)( fileName => {
       UserListParser.parseUserListFromResourceFile(s"$userListDirectory$fileName")
     }))

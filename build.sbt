@@ -21,3 +21,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0",
   "commons-io" % "commons-io" % "2.5"
 )
+
+enablePlugins(JavaAppPackaging)
+
+compile <<= (compile in Compile) dependsOn flywayMigrate
