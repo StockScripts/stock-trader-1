@@ -12,8 +12,8 @@ object BacktestModule extends Module {
   val triggerWord = "backtest"
   val helpText = "backtest <scriptname> <stock:APPL> <list:SP500> <pair:KO:PEP> <2005-2012> <2/3/2006-3/14/2006>"
 
-  def run(params: Seq[String]): Future[Unit] = async {
-    params.head.toLowerCase match {
+  def run(command: String, flags: Seq[String]): Future[Unit] = async {
+    command match {
       case "test" =>
     }
   }

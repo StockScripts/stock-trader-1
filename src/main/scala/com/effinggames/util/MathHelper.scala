@@ -7,8 +7,8 @@ object MathHelper {
     * @param decimalLimit Limit to X decimal digits.
     * @return Returns the rounded number.
     */
-  def roundDecimals[A <: Numeric](number: A, decimalLimit: Int): A = {
-    val roundingFactor = math.pow(10, decimalLimit)
-    Math.round(number * roundingFactor) / roundingFactor
+  def roundDecimals(number: Float, decimalLimit: Int): Float = {
+    val roundingFactor = math.pow(10, decimalLimit).toFloat
+    math.round(number * roundingFactor) / roundingFactor
   }
 }

@@ -25,14 +25,32 @@ object StockFetcher {
   private val fixedPool = Executors.newFixedThreadPool(10)
   private val fixedEC = ExecutionContext.fromExecutorService(fixedPool)
 
-  //Downloads all the stocks listed in the resources file.
-  def downloadStocksFromResourceFile(fileName: String): Future[Iterator[Try[RunBatchActionResult]]] = async {
-    logger.info(s"Downloading stocks for $fileName")
-    val stockList = getClass.getResourceAsStream(fileName)
+  /**
+    * Downloads all the stocks listed in the resources file.
+    * @param fileNames List of file paths to get symbols from.
+    * @param limit How many of the symbols to download.
+    * @param skip How many of the symbols to skip.
+    * @return
+    */
+  def downloadStocksFromResourceFiles(
+    fileNames: Seq[String],
+    limit: Option[Int] = None,
+    skip: Option[Int] = None
+  ): Future[Seq[Try[RunBatchActionResult]]] = async {
+    val limitNum = limit.getOrElse(Int.MaxValue)
+    val skipNum = skip.getOrElse(0)
+    logger.info(s"Downloading stocks for ${fileNames.foldLeft("")((p, c) => s"$p $c").trim}")
+    logger.info(s"Limiting to $limitNum symbols, skipping $skipNum symbols")
+
+    //Gets all the symbols from the files.
+    val symbols = fileNames.flatMap({ fileName =>
+      val fileStream = getClass.getResourceAsStream(fileName)
+      scala.io.Source.fromInputStream(fileStream).getLines
+    })
 
     //Fetches the stock csv and inserts into database.
     //Throttles to only downloading 10 csv's at a time.
-    val throttledFutures = scala.io.Source.fromInputStream(stockList).getLines.map( csvLine => {
+    val throttledFutures = symbols.slice(skipNum, skipNum + limitNum).map( csvLine => {
       val symbol = csvLine.trim
       val future = Future {
         Await.result(fetchStockCSV(symbol.trim), 2.minutes)
@@ -46,7 +64,7 @@ object StockFetcher {
     })
 
     val results = await(Future.sequence(throttledFutures))
-    logger.info(s"Finished downloading $fileName for ${results.length} stocks")
+    logger.info(s"Finished downloading EOD data for ${results.length} stocks")
     results
   }
 

@@ -13,18 +13,18 @@ import scala.concurrent.{Future, blocking}
 object DownloadModule extends Module {
   val name = "Download"
   val triggerWord = "download"
-  val helpText = "download <all> <stocks> <userLists>"
+  val helpText = "download <stocks -clean true -limit 100 -skip 10> <userLists>"
 
   private val stockListDirectory = "/stockLists/"
   private val userListDirectory = "/userLists/"
 
-  def run(params: Seq[String]): Future[Unit] = async {
-    params.head match {
-      case "all" =>
-        await(fetchStocks().withLogFailure)
-        await(parseUserLists().withLogFailure)
+  def run(command: String, flags: Seq[String]): Future[Unit] = async {
+    val limit = getFlag[Int](flags, "-limit")
+    val skip = getFlag[Int](flags, "-skip")
+    val clean = getFlag[Boolean](flags, "-clean")
+    command match {
       case "stocks" =>
-        await(fetchStocks().withLogFailure)
+        await(fetchStocks(clean, limit, skip).withLogFailure)
       case "userLists" =>
         await(parseUserLists().withLogFailure)
     }
@@ -36,17 +36,16 @@ object DownloadModule extends Module {
     fileExt == ".txt" || fileExt == ".csv"
   }
 
-  private def fetchStocks(): Future[Unit] = async {
-    logger.info("Truncating table eod_data")
-    blocking { stockDB.executeAction("TRUNCATE eod_data") }
+  private def fetchStocks(clean: Option[Boolean] = None, limit: Option[Int] = None, skip: Option[Int] = None): Future[Unit] = async {
+    if (clean.contains(true)) {
+      logger.info("Truncating table eod_data")
+      blocking { stockDB.executeAction("TRUNCATE eod_data") }
+    }
 
     val filePaths = FileHelper.getFilePathsInDirectory(stockListDirectory)
       .filter(isCorrectFormat)
-      .toVector
 
-    await(FutureHelper.traverseSequential(filePaths)( filePath => {
-      StockFetcher.downloadStocksFromResourceFile(filePath).withLogFailure
-    }))
+    await(StockFetcher.downloadStocksFromResourceFiles(filePaths, limit, skip).withLogFailure)
   }
 
   private def parseUserLists(): Future[Unit] = async {
@@ -55,7 +54,6 @@ object DownloadModule extends Module {
 
     val filePaths = FileHelper.getFilePathsInDirectory(userListDirectory)
       .filter(isCorrectFormat)
-      .toVector
 
     await(FutureHelper.traverseSequential(filePaths)( filePath => {
       UserListParser.parseUserListFromResourceFile(filePath).withLogFailure

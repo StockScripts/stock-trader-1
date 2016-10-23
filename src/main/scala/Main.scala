@@ -11,7 +11,7 @@ import scala.concurrent.duration._
   * Handles the command line commands and loads the different modules.
   */
 object Main {
-  private val moduleList: List[Module] = List(BacktestModule, DownloadModule)
+  private val moduleList = List(BacktestModule, DownloadModule)
   private def printHelp(): Unit = moduleList.map(i => s"${i.name.capitalize} Usage: ${i.helpText}").foreach(println)
 
   def main(args: Array[String]) {
@@ -22,7 +22,7 @@ object Main {
 
       //Runs the modules that match the trigger word, and passes the remaining args.
       moduleList.find(_.triggerWord == argList.head) match {
-        case Some(module) => Await.ready(module.run(argList.drop(1)), 1.hour)
+        case Some(module) => Await.ready(module.run(argList(1), argList.drop(2)), 1.hour)
         case _ => printHelp()
       }
       logger.info("All Finished")
