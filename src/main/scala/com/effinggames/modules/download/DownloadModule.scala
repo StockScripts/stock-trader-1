@@ -1,13 +1,12 @@
 package com.effinggames.modules.download
 
-import com.effinggames.core.{Module, FutureHelper, LoggerHelper, DatabaseHelper}
-import com.effinggames.core.FutureHelper._
+import com.effinggames.core.Module
+import com.effinggames.util.{FileHelper, DatabaseHelper, LoggerHelper, FutureHelper}
+import FutureHelper._
 import DatabaseHelper.stockDB
 import LoggerHelper.logger
-import org.apache.commons.io.{Charsets, IOUtils}
 
 import scala.async.Async.{async, await}
-import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, blocking}
 
@@ -15,6 +14,9 @@ object DownloadModule extends Module {
   val name = "Download"
   val triggerWord = "download"
   val helpText = "download <all> <stocks> <userLists>"
+
+  private val stockListDirectory = "/stockLists/"
+  private val userListDirectory = "/userLists/"
 
   def run(params: Seq[String]): Future[Unit] = async {
     params.head match {
@@ -28,20 +30,22 @@ object DownloadModule extends Module {
     }
   }
 
-  //Filters user / stock lists that are named incorrectly.
-  private def isCorrectFormat(str: String): Boolean = str.matches("[a-zA-Z0-9_]*[.]txt")
+  //Filters user / stock lists that aren't a csv or txt file.
+  private def isCorrectFormat(str: String): Boolean = {
+    val fileExt = str.takeRight(4)
+    fileExt == ".txt" || fileExt == ".csv"
+  }
 
   private def fetchStocks(): Future[Unit] = async {
     logger.info("Truncating table eod_data")
     blocking { stockDB.executeAction("TRUNCATE eod_data") }
 
-    val stockListDirectory = "/stockLists/"
-    val fileNames = IOUtils.readLines(getClass.getResourceAsStream(stockListDirectory), Charsets.UTF_8)
+    val filePaths = FileHelper.getFilePathsInDirectory(stockListDirectory)
       .filter(isCorrectFormat)
       .toVector
 
-    await(FutureHelper.traverseSequential(fileNames)( fileName => {
-      StockFetcher.downloadStocksFromResourceFile(s"$stockListDirectory$fileName").withLogFailure
+    await(FutureHelper.traverseSequential(filePaths)( filePath => {
+      StockFetcher.downloadStocksFromResourceFile(filePath).withLogFailure
     }))
   }
 
@@ -49,13 +53,12 @@ object DownloadModule extends Module {
     logger.info("Truncating table user_list")
     blocking { stockDB.executeAction("TRUNCATE user_list") }
 
-    val userListDirectory = "/userLists/"
-    val fileNames = IOUtils.readLines(getClass.getResourceAsStream(userListDirectory), Charsets.UTF_8)
+    val filePaths = FileHelper.getFilePathsInDirectory(userListDirectory)
       .filter(isCorrectFormat)
       .toVector
 
-    await(FutureHelper.traverseSequential(fileNames)( fileName => {
-      UserListParser.parseUserListFromResourceFile(s"$userListDirectory$fileName").withLogFailure
+    await(FutureHelper.traverseSequential(filePaths)( filePath => {
+      UserListParser.parseUserListFromResourceFile(filePath).withLogFailure
     }))
   }
 }

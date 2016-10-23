@@ -1,10 +1,10 @@
-package com.effinggames.core
-
-import com.effinggames.core.LoggerHelper._
+package com.effinggames.util
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.Try
+
+import LoggerHelper._
 
 object FutureHelper {
   /**
@@ -15,7 +15,7 @@ object FutureHelper {
     * @return Return a future
     */
   def traverseSequential[A, B](list: Seq[A])(fn: A => Future[B])
-    (implicit ec: ExecutionContext): Future[Seq[B]] = {
+    (implicit ec: ExecutionContext): Future[Vector[B]] = {
     val results = ArrayBuffer[B]()
     var future = Future()
 
@@ -30,19 +30,21 @@ object FutureHelper {
     )
 
     //When all the futures complete, returns the results array.
-    future.map(i => results)
+    future.map(i => results.toVector)
   }
 
-  /**
-    * Converts a Future to a Try[Future].
-    * @param future The future being converted
-    * @return Returns the future wrapped in a try.
-    */
-  def convertToTry[A](future: Future[A])(implicit ec: ExecutionContext): Future[Try[A]] = {
-    val promise = Promise[Try[A]]()
-    future.onComplete(promise.success)
-    promise.future
+  implicit class FutureWithTrying[A](self: Future[A])(implicit ec: ExecutionContext) {
+    /**
+      * Converts the Future to a Try[Future].
+      * @return Returns the future wrapped in a try.
+      */
+    def toTry(implicit ec: ExecutionContext): Future[Try[A]] = {
+      val promise = Promise[Try[A]]()
+      self.onComplete(promise.success)
+      promise.future
+    }
   }
+
 
   implicit class FutureWithFailureLogging[A](self: Future[A])(implicit ec: ExecutionContext) {
     /**

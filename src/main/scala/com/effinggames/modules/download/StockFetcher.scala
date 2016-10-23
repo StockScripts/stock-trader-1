@@ -3,7 +3,8 @@ package com.effinggames.modules.download
 import java.text.SimpleDateFormat
 import java.util.concurrent.Executors
 
-import com.effinggames.core.{LoggerHelper, FutureHelper, DatabaseHelper}
+import com.effinggames.util.{MathHelper, DatabaseHelper, LoggerHelper, FutureHelper}
+import FutureHelper._
 import DatabaseHelper.stockDB
 import DatabaseHelper.stockDB._
 import LoggerHelper.logger
@@ -41,7 +42,7 @@ object StockFetcher {
         case err => logger.warn(s"Failed to find data for $symbol - $err")
       }
 
-      FutureHelper.convertToTry(future)
+      future.toTry
     })
 
     val results = await(Future.sequence(throttledFutures))
@@ -58,16 +59,23 @@ object StockFetcher {
       val reader = CSVReader.open(Source.fromString(csvRsp.body))
       val csvLines = reader.allWithHeaders.reverse
       val dateFormatter = new SimpleDateFormat("yyyy-MM-dd")
-      val eodDataList = csvLines.map(i => EodData(
-        symbol = symbol,
-        date = dateFormatter.parse(i("Date")),
-        open = i("Open").toFloat,
-        high = i("High").toFloat,
-        low = i("Low").toFloat,
-        close = i("Close").toFloat,
-        volume = i("Volume").toLong,
-        adjClose = i("Adj Close").toFloat
-      ))
+      val eodDataList = csvLines.map(i => {
+        val adjustFactor = i("Adj Close").toFloat / i("Close").toFloat
+        //Adjusts and rounds the value
+        def getFormattedField(value: Float): Float = {
+          MathHelper.roundDecimals(value * adjustFactor, 2)
+        }
+        EodData(
+          symbol = symbol,
+          date = dateFormatter.parse(i("Date")),
+          open = getFormattedField(i("Open").toFloat),
+          high = getFormattedField(i("High").toFloat),
+          low = getFormattedField(i("Low").toFloat),
+          close = getFormattedField(i("Close").toFloat),
+          volume = i("Volume").toLong,
+          adjClose = i("Adj Close").toFloat
+        )
+      })
 
       val insertQuery = quote {
         liftQuery(eodDataList).foreach(i => query[EodData].insert(i))

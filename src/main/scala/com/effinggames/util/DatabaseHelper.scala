@@ -1,4 +1,4 @@
-package com.effinggames.core
+package com.effinggames.util
 
 import io.getquill.{JdbcContext, PostgresDialect, SnakeCase}
 
@@ -19,5 +19,6 @@ object DatabaseHelper {
         val conn = resultSet.getConnection
         resultSet.setArray(index, conn.createArrayOf("text", seq.toArray))
       },
-      java.sql.Types.ARRAY)
+      java.sql.Types.ARRAY
+  )
 }

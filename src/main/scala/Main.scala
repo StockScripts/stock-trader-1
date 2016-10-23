@@ -1,3 +1,5 @@
+import com.effinggames.util.LoggerHelper
+import LoggerHelper._
 import com.effinggames.core.Module
 import com.effinggames.modules.backtest.BacktestModule
 import com.effinggames.modules.download.DownloadModule
@@ -23,6 +25,7 @@ object Main {
         case Some(module) => Await.ready(module.run(argList.drop(1)), 1.hour)
         case _ => printHelp()
       }
+      logger.info("All Finished")
     }
     System.exit(0)
   }

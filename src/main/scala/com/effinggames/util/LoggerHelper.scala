@@ -1,4 +1,4 @@
-package com.effinggames.core
+package com.effinggames.util
 
 import com.typesafe.scalalogging.Logger
 
