@@ -12,9 +12,11 @@ flywayUser := s"${sys.env.getOrElse("DATABASE_USER", "null")}"
 
 flywayPassword := s"${sys.env.getOrElse("DATABASE_PASSWORD", "null")}"
 
+updateOptions := updateOptions.value.withCachedResolution(true)
+
 libraryDependencies ++= Seq(
   "com.github.tototoshi" %% "scala-csv" % "1.3.3",
-  "io.getquill" %% "quill-jdbc" % "0.10.0",
+  "io.getquill" %% "quill-jdbc" % "1.0.0",
   "org.postgresql" % "postgresql" % "9.4.1208",
   "com.typesafe.play" %% "play-ws" % "2.4.3",
   "org.scala-lang.modules" %% "scala-async" % "0.9.5",

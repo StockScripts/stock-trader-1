@@ -12,7 +12,8 @@ object FutureHelper {
     * Executes the futures sequentially, e.g. the sequential version of Future.traverse()
     * @param list List of elements to be iterated over.
     * @param fn Iterator function that returns a Future.
-    * @return Return a future
+    * @example FutureHelper.traverseSequential(listOfStr)(getUrl)
+    * @return Returns a future s.
     */
   def traverseSequential[A, B](list: Seq[A])(fn: A => Future[B])
     (implicit ec: ExecutionContext): Future[Vector[B]] = {

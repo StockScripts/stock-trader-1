@@ -1,12 +1,12 @@
-package com.effinggames.core
+package com.effinggames.modules
+
+import com.effinggames.util.LoggerHelper._
 
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 
-import com.effinggames.util.LoggerHelper._
-
 abstract class Module {
-  val name: String //e.g. "Backtest Module"
+  val name: String //e.g. "Backtest"
   val triggerWord: String //e.g. "backtest"
   val helpText: String //e.g. "backtest <scriptname> <stock:APPL> <list:SP500> <pair:KO:PEP> <2005-2012> <2/3/2006-3/14/2006>"
 

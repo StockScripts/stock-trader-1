@@ -1,8 +1,9 @@
 package com.effinggames.modules.download
 
+import com.effinggames.modules.SharedModels
 import com.effinggames.util.{LoggerHelper, DatabaseHelper}
 import LoggerHelper._
-import com.effinggames.core.Models.UserList
+import SharedModels.UserList
 import DatabaseHelper._
 import DatabaseHelper.stockDB._
 

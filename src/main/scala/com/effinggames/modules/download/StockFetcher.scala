@@ -1,14 +1,15 @@
 package com.effinggames.modules.download
 
-import java.text.SimpleDateFormat
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.concurrent.Executors
-
+import com.effinggames.modules.SharedModels
 import com.effinggames.util.{MathHelper, DatabaseHelper, LoggerHelper, FutureHelper}
 import FutureHelper._
 import DatabaseHelper.stockDB
 import DatabaseHelper.stockDB._
 import LoggerHelper.logger
-import com.effinggames.core.Models.EodData
+import SharedModels.EodData
 
 import com.github.tototoshi.csv.CSVReader
 import play.api.libs.ws.ning.NingWSClient
@@ -22,11 +23,13 @@ import scala.util.Try
 
 object StockFetcher {
   private val wsClient = NingWSClient()
+  //Limits fetching from Yahoo to 10 symbols at a time
   private val fixedPool = Executors.newFixedThreadPool(10)
   private val fixedEC = ExecutionContext.fromExecutorService(fixedPool)
 
   /**
     * Downloads all the stocks listed in the resources file.
+    *
     * @param fileNames List of file paths to get symbols from.
     * @param limit How many of the symbols to download.
     * @param skip How many of the symbols to skip.
@@ -39,7 +42,7 @@ object StockFetcher {
   ): Future[Seq[Try[RunBatchActionResult]]] = async {
     val limitNum = limit.getOrElse(Int.MaxValue)
     val skipNum = skip.getOrElse(0)
-    logger.info(s"Downloading stocks for ${fileNames.foldLeft("")((p, c) => s"$p $c").trim}")
+    logger.info(s"Downloading stocks for ${fileNames.mkString(" ")}")
     logger.info(s"Limiting to $limitNum symbols, skipping $skipNum symbols")
 
     //Gets all the symbols from the files.
@@ -76,7 +79,7 @@ object StockFetcher {
     if (csvRsp.status == 200) {
       val reader = CSVReader.open(Source.fromString(csvRsp.body))
       val csvLines = reader.allWithHeaders.reverse
-      val dateFormatter = new SimpleDateFormat("yyyy-MM-dd")
+      val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
       val eodDataList = csvLines.map(i => {
         val adjustFactor = i("Adj Close").toFloat / i("Close").toFloat
         //Adjusts and rounds the value
@@ -85,7 +88,7 @@ object StockFetcher {
         }
         EodData(
           symbol = symbol,
-          date = dateFormatter.parse(i("Date")),
+          date = LocalDate.parse(i("Date"), dateFormatter),
           open = getFormattedField(i("Open").toFloat),
           high = getFormattedField(i("High").toFloat),
           low = getFormattedField(i("Low").toFloat),

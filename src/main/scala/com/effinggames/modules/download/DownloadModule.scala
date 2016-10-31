@@ -1,6 +1,6 @@
 package com.effinggames.modules.download
 
-import com.effinggames.core.Module
+import com.effinggames.modules.Module
 import com.effinggames.util.{FileHelper, DatabaseHelper, LoggerHelper, FutureHelper}
 import FutureHelper._
 import DatabaseHelper.stockDB

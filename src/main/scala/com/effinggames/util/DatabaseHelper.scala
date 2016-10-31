@@ -10,7 +10,7 @@ object DatabaseHelper {
   implicit val StringSeqDecoder: Decoder[Seq[String]] = decoder[Seq[String]] {
       resultSet => {
         index => {
-          resultSet.getArray(index).getArray().asInstanceOf[Seq[String]]
+          resultSet.getArray(index).getArray.asInstanceOf[Array[String]]
         }
       }
     }

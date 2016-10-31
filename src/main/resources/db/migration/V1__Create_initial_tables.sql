@@ -1,6 +1,6 @@
 CREATE TABLE eod_data (
   id SERIAL PRIMARY KEY,
-  symbol CHAR(10) NOT NULL,
+  symbol VARCHAR NOT NULL,
   date DATE NOT NULL,
   open DECIMAL(8,3) NOT NULL,
   high DECIMAL(8,3) NOT NULL,

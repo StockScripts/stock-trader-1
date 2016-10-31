@@ -1,11 +1,11 @@
-package com.effinggames.core
+package com.effinggames.modules
 
-import java.util.Date
+import java.time.LocalDate
 
-object Models {
+object SharedModels {
   case class EodData(
     symbol: String,
-    date: Date,
+    date: LocalDate,
     open: Float,
     high: Float,
     low: Float,
