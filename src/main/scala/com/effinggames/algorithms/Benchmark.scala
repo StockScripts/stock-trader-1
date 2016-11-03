@@ -6,16 +6,18 @@ import scala.async.Async.{async, await}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-object Test extends Algorithm {
+/**
+  * Benchmark algo, buys the SP500 and holds it forever.
+  */
+object Benchmark extends Algorithm {
   def initialize(ctx: InitContext): Future[Unit] = async {
-      await(ctx.loadUserList("SP500_2016"))
       await(ctx.loadSymbol("VOO"))
   }
 
   def tickHandler(ctx: TickHandlerContext): Unit = {
     val portfolio = ctx.portfolio
     val stock = ctx.getStock("VOO")
-    val numShares = Math.floor(portfolio.floatingCash / stock.getOpen()).toInt
+    val numShares = Math.floor(portfolio.floatingCash / stock.getPrice).toInt
     if (numShares > 0) {
       ctx.order(stock, numShares)
     }

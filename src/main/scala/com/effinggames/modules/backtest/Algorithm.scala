@@ -1,11 +1,16 @@
 package com.effinggames.modules.backtest
 
 import scala.concurrent.Future
-import scala.async.Async.{async, await}
 
 abstract class Algorithm {
+  //Overridable backtester hints.
+  //How many days of data the algo needs.
+  val minimumDataLength = 0
+
+  //Used for loading all data that the algo will need.
   def initialize(ctx: InitContext = new InitContext()): Future[Unit]
 
+  //Iterates over all eod ticks and holds the main algo logic.
   def tickHandler(ctx: TickHandlerContext): Unit
 }
 
@@ -25,9 +30,12 @@ class TickHandlerContext(_portfolio: Portfolio) {
   //Gets the starting portfolio for this tick.
   def portfolio: Portfolio = _portfolio
 
+  //Orders X shares of stock at the current price.
   def order(stock: Stock, quantity: Int): Unit = {
-    val position = Position(stock, quantity, stock.getPrice)
-    currentPortfolio = currentPortfolio.addPosition(position)
+    if (quantity != 0) {
+      val position = Position(stock, quantity, stock.getPrice)
+      currentPortfolio = currentPortfolio.addPosition(position)
+    }
   }
 
   def isFirstTickOfDay: Boolean = Stock.isFirstTickOfDay

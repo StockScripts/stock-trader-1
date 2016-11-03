@@ -44,7 +44,7 @@ object StockLoader {
     }
 
     val stock = new Stock(results)
-    symbolStockMap = symbolStockMap + (symbol -> stock)
+    symbolStockMap += (symbol -> stock)
   }
 
   //Fetches symbols for a user list, and then saves symbol seq in the cache.
@@ -64,7 +64,7 @@ object StockLoader {
     }
 
     val symbols = results.headOption.map(_.symbols).getOrElse(Seq.empty)
-    userListSymbolMap = userListSymbolMap + (userListName -> symbols)
+    userListSymbolMap += (userListName -> symbols)
     symbols
   }
 
@@ -78,7 +78,7 @@ object StockLoader {
         val future = Future {
           Await.result(fetchSymbol(formattedSymbol), 2.minutes)
         }(fixedEC)
-        symbolFutureMap = symbolFutureMap + (formattedSymbol -> future)
+        symbolFutureMap += (formattedSymbol -> future)
         future
     }
 
@@ -92,7 +92,7 @@ object StockLoader {
       case Some(future) => future
       case None =>
         val future = fetchUserList(formattedListName)
-        userListFutureMap = userListFutureMap + (formattedListName -> future)
+        userListFutureMap += (formattedListName -> future)
         future
     }
 

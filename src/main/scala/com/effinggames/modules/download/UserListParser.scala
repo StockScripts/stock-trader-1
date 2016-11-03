@@ -15,7 +15,7 @@ object UserListParser {
 
   def parseUserListFromResourceFile(fileName: String): Future[RunActionResult] = async {
     logger.info(s"Parsing user list for $fileName")
-    val listName = fileName.split("/").last.split("[.]")(0)
+    val listName = fileName.split("/").last.split("[.]")(0).toUpperCase
 
     val listStream = getClass.getResourceAsStream(fileName)
     val symbols = scala.io.Source.fromInputStream(listStream).getLines.toVector.map(_.trim)

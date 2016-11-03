@@ -52,7 +52,8 @@ object DownloadModule extends Module {
     logger.info("Truncating table user_list")
     blocking { stockDB.executeAction("TRUNCATE user_list") }
 
-    val filePaths = FileHelper.getFilePathsInDirectory(userListDirectory)
+    val filePaths = FileHelper.getFilePathsInDirectory(userListDirectory) ++
+      FileHelper.getFilePathsInDirectory(stockListDirectory)
       .filter(isCorrectFormat)
 
     await(FutureHelper.traverseSequential(filePaths)( filePath => {

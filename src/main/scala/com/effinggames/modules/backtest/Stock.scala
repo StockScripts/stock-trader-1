@@ -1,7 +1,10 @@
 package com.effinggames.modules.backtest
 
+import java.time.LocalDate
+
 import com.effinggames.modules.SharedModels
 import SharedModels.EodData
+import com.effinggames.util.MathHelper
 
 //Stock companion object for tracking the global eodData index, and intraday tick counts.
 object Stock {
@@ -56,7 +59,7 @@ object Stock {
   }
 }
 
-//Wrapper class for a big seq of EodData.
+//Wrapper for a big seq of EodData that adds querying + statistical methods.
 class Stock(eodData: IndexedSeq[EodData]) {
   //Give internal access of underlying eodData to backtest module
   private[backtest] val _eodData = eodData
@@ -84,6 +87,14 @@ class Stock(eodData: IndexedSeq[EodData]) {
     }
   }
 
+  def getDate: LocalDate = getDate()
+  def getDate(daysAgo: Int = 0): LocalDate = {
+    require(daysAgo >= 0, "daysAgo must be a non-negative.")
+    eodData.lift(getDataIndex(daysAgo)) match {
+      case Some(data) => data.date
+      case None => LocalDate.ofEpochDay(0)
+    }
+  }
   def getOpen: Float = getOpen()
   def getOpen(daysAgo: Int = 0): Float = {
     require(daysAgo >= 0, "daysAgo must be a non-negative.")
@@ -92,40 +103,74 @@ class Stock(eodData: IndexedSeq[EodData]) {
       case None => -1
     }
   }
-  def getClose: Float = getOpen()
+  def getClose: Float = getClose()
   def getClose(daysAgo: Int = 0): Float = {
     require(daysAgo >= 0, "daysAgo must be a non-negative.")
-    require(!(daysAgo == 0 && !Stock.isLastTickOfDay), "No looking in the future. Cannot query since day has not ended.")
+    require(!(daysAgo == 0 && !Stock.isLastTickOfDay), "No looking in the future. DaysAgo must be > 0 if day has not ended.")
     eodData.lift(getDataIndex(daysAgo)) match {
       case Some(data) => data.close
       case None => -1
     }
   }
-  def getLow: Float = getOpen()
+  def getLow: Float = getLow()
   def getLow(daysAgo: Int = 0): Float = {
     require(daysAgo >= 0, "daysAgo must be a non-negative.")
-    require(!(daysAgo == 0 && !Stock.isLastTickOfDay), "No looking in the future. Cannot query since day has not ended.")
+    require(!(daysAgo == 0 && !Stock.isLastTickOfDay), "No looking in the future. DaysAgo must be > 0 if day has not ended.")
     eodData.lift(getDataIndex(daysAgo)) match {
       case Some(data) => data.low
       case None => -1
     }
   }
-  def getHigh: Float = getOpen()
+  def getHigh: Float = getHigh()
   def getHigh(daysAgo: Int = 0): Float = {
     require(daysAgo >= 0, "daysAgo must be a non-negative.")
-    require(!(daysAgo == 0 && !Stock.isLastTickOfDay), "No looking in the future. Cannot query since day has not ended.")
+    require(!(daysAgo == 0 && !Stock.isLastTickOfDay), "No looking in the future. DaysAgo must be > 0 if day has not ended.")
     eodData.lift(getDataIndex(daysAgo)) match {
       case Some(data) => data.high
       case None => -1
     }
   }
-  def getVolume: Float = getOpen()
-  def getVolume(daysAgo: Int = 0): Float = {
+  def getVolume: Long = getVolume()
+  def getVolume(daysAgo: Int = 0): Long = {
     require(daysAgo >= 0, "daysAgo must be a non-negative.")
-    require(!(daysAgo == 0 && !Stock.isLastTickOfDay), "No looking in the future. Cannot query since day has not ended.")
+    require(!(daysAgo == 0 && !Stock.isLastTickOfDay), "No looking in the future. DaysAgo must be > 0 if day has not ended.")
     eodData.lift(getDataIndex(daysAgo)) match {
       case Some(data) => data.volume
       case None => -1
     }
+  }
+
+  //Gets the simple moving average over X days.
+  def getSMA(overHowManyDays: Int, daysAgo: Int = 0): Float = {
+    require(daysAgo >= 0, "daysAgo must be a non-negative.")
+    require(!(daysAgo == 0 && !Stock.isLastTickOfDay), "No looking in the future. DaysAgo must be > 0 if day has not ended.")
+    val closeValues = (0 until overHowManyDays).map(i => getClose(i + daysAgo))
+    MathHelper.mean(closeValues)
+  }
+
+  //Standard deviation of close to close change over X days.
+  def getDailySD(overHowManyDays: Int, daysAgo: Int = 0): Float = {
+    require(daysAgo >= 0, "daysAgo must be a non-negative.")
+    require(!(daysAgo == 0 && !Stock.isLastTickOfDay), "No looking in the future. DaysAgo must be > 0 if day has not ended.")
+    val dailyChangeValues = (0 until overHowManyDays).map(i => {
+      getClose(i + daysAgo) - getClose(i + daysAgo + 1)
+    })
+    MathHelper.stdDeviation(dailyChangeValues)
+  }
+
+  //Gets minimum volume over last X days.
+  def getMinimumVolume(overHowManyDays: Int, daysAgo: Int): Long = {
+    require(daysAgo >= 0, "daysAgo must be a non-negative.")
+    require(!(daysAgo == 0 && !Stock.isLastTickOfDay), "No looking in the future. DaysAgo must be > 0 if day has not ended.")
+    val volumes = (0 until overHowManyDays).map(i => getVolume(i + daysAgo))
+    volumes.min
+  }
+
+  //Gets average volume over last X days.
+  def getAverageVolume(overHowManyDays: Int, daysAgo: Int): Long = {
+    require(daysAgo >= 0, "daysAgo must be a non-negative.")
+    require(!(daysAgo == 0 && !Stock.isLastTickOfDay), "No looking in the future. DaysAgo must be > 0 if day has not ended.")
+    val volumes = (0 until overHowManyDays).map(i => getVolume(i + daysAgo))
+    volumes.sum / volumes.size
   }
 }

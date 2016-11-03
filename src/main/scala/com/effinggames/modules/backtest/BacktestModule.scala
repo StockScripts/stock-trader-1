@@ -1,7 +1,8 @@
 package com.effinggames.modules.backtest
 
-import java.time.{ZoneId, LocalDate}
-
+import java.time.format.{DateTimeFormatterBuilder, DateTimeFormatter}
+import java.time.temporal.ChronoField
+import java.time.{LocalDate, ZoneId}
 
 import com.effinggames.algorithms._
 import com.effinggames.modules.Module
@@ -15,13 +16,27 @@ import scala.concurrent.Future
 object BacktestModule extends Module {
   val name = "Backtest"
   val triggerWord = "backtest"
-  val helpText = "backtest <scriptname> <stock:APPL> <list:SP500> <pair:KO:PEP> <2005-2012> <2/3/2006-3/14/2006>"
+  val helpText = "backtest <run -algo BuyOnGap -from 2000 -to 3/14/2006>"
+
+  private val dateFormatter = new DateTimeFormatterBuilder()
+    .appendPattern("[yyyy]")
+    .appendPattern("[M/d/yyyy]")
+    .parseDefaulting(ChronoField.MONTH_OF_YEAR, 1)
+    .parseDefaulting(ChronoField.DAY_OF_MONTH, 1)
+    .toFormatter()
 
   def run(command: String, flags: Seq[String]): Future[Unit] = async {
     command match {
-      case "test" =>
-        val startDate = LocalDate.parse("2000-01-01")
-        val endDate = LocalDate.now()
+      case "run" =>
+        val startDate = getFlag[String](flags, "-from") match {
+          case Some(dateStr) => LocalDate.parse(dateStr, dateFormatter)
+          case _ => LocalDate.parse("2000-01-01")
+        }
+
+        val endDate = getFlag[String](flags, "-to") match {
+          case Some(dateStr) => LocalDate.parse(dateStr, dateFormatter)
+          case _ => LocalDate.now()
+        }
 
         logger.info(s"Back test starting from $startDate to $endDate")
         await(StockLoader.loadSymbol("IBM"))
@@ -38,7 +53,7 @@ object BacktestModule extends Module {
         Stock.setTargetDataLength(ibmDataSeq.size)
         logger.info(s"Loading data for ${Stock.targetDataLength - Stock.currentDateIndex} days")
 
-        val algos = List(Test)
+        val algos = List(BuyOnGap, Benchmark)
         val initializeFuture = FutureHelper.traverseSequential(algos)(_.initialize())
         await(initializeFuture)
 
@@ -47,7 +62,7 @@ object BacktestModule extends Module {
         var portfolioMap: Map[Algorithm, Portfolio] = algos.map(_ -> new Portfolio(startingCash)).toMap
 
         while (Stock.currentDateIndex < endIndex) {
-          algos.foreach { algo =>
+          algos.filter(Stock.currentDateIndex >= _.minimumDataLength).foreach { algo =>
             val ctx = new TickHandlerContext(portfolioMap(algo))
             algo.tickHandler(ctx)
             portfolioMap = portfolioMap + (algo -> ctx.currentPortfolio)

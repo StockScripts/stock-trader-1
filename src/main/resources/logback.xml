@@ -10,7 +10,7 @@
     </appender>
 
     <!-- Levels of specific loggers -->
-    <logger name="com.effinggames.LoggerHelper" level="INFO"/>
+    <logger name="com.effinggames.LoggerHelper" level="DEBUG"/>
 
     <!-- Logging level for every logger -->
     <root level="WARN">

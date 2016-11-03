@@ -73,8 +73,9 @@ object StockFetcher {
 
   //Fetches eod stock CSV from Yahoo and inserts into DB.
   private def fetchStockCSV(symbol: String): Future[RunBatchActionResult] = async {
-    logger.info(s"Fetching data for $symbol")
-    val csvRsp = await(wsClient.url(s"http://ichart.finance.yahoo.com/table.csv?s=$symbol&g=d&a=1&b=1&c=2000&ignore=.csv").get())
+    val formattedSymbol = symbol.toUpperCase
+    logger.info(s"Fetching data for $formattedSymbol")
+    val csvRsp = await(wsClient.url(s"http://ichart.finance.yahoo.com/table.csv?s=$formattedSymbol&g=d&a=1&b=1&c=2000&ignore=.csv").get())
 
     if (csvRsp.status == 200) {
       val reader = CSVReader.open(Source.fromString(csvRsp.body))
@@ -87,7 +88,7 @@ object StockFetcher {
           MathHelper.roundDecimals(value * adjustFactor, 2)
         }
         EodData(
-          symbol = symbol,
+          symbol = formattedSymbol,
           date = LocalDate.parse(i("Date"), dateFormatter),
           open = getFormattedField(i("Open").toFloat),
           high = getFormattedField(i("High").toFloat),
