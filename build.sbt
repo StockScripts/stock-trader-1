@@ -20,7 +20,8 @@ libraryDependencies ++= Seq(
   "org.postgresql" % "postgresql" % "9.4.1208",
   "com.typesafe.play" %% "play-ws" % "2.4.3",
   "org.scala-lang.modules" %% "scala-async" % "0.9.5",
-  "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0"
+  "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0",
+  "com.twitter" % "util-eval_2.11" % "6.38.0"
 )
 
 enablePlugins(JavaAppPackaging)

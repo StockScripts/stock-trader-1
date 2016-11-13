@@ -4,10 +4,10 @@ import java.time.format.{DateTimeFormatterBuilder, DateTimeFormatter}
 import java.time.temporal.ChronoField
 import java.time.{LocalDate, ZoneId}
 
-import com.effinggames.algorithms._
 import com.effinggames.modules.Module
-import com.effinggames.util.FutureHelper
+import com.effinggames.util.{FileHelper, FutureHelper}
 import com.effinggames.util.LoggerHelper.logger
+import com.twitter.util.Eval
 
 import scala.async.Async.{async, await}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -16,8 +16,9 @@ import scala.concurrent.Future
 object BacktestModule extends Module {
   val name = "Backtest"
   val triggerWord = "backtest"
-  val helpText = "backtest <run -algo BuyOnGap -from 2000 -to 3/14/2006>"
+  val helpText = "backtest <run --algo Test1 --algo2 Test2 --algo3 Test3 --pipe true --from 2000 --to 3/14/2006>"
 
+  private val evalInstance = new Eval
   private val dateFormatter = new DateTimeFormatterBuilder()
     .appendPattern("[yyyy]")
     .appendPattern("[M/d/yyyy]")
@@ -28,57 +29,142 @@ object BacktestModule extends Module {
   def run(command: String, flags: Seq[String]): Future[Unit] = async {
     command match {
       case "run" =>
-        val startDate = getFlag[String](flags, "-from") match {
+        //Gets the start / end date flags if applicable.
+        val startDate = getFlag[String](flags, "--from") match {
           case Some(dateStr) => LocalDate.parse(dateStr, dateFormatter)
           case _ => LocalDate.parse("2000-01-01")
         }
 
-        val endDate = getFlag[String](flags, "-to") match {
+        val endDate = getFlag[String](flags, "--to") match {
           case Some(dateStr) => LocalDate.parse(dateStr, dateFormatter)
           case _ => LocalDate.now()
         }
 
+        val algoFileNames = Vector(
+          getFlag[String](flags, "--algo"),
+          getFlag[String](flags, "--algo2"),
+          getFlag[String](flags, "--algo3")
+        )
+
         logger.info(s"Back test starting from $startDate to $endDate")
+
+        logger.info("Warming up script interpreter..")
+        Future {
+          //Booting up the scala interpreter takes 2-4 seconds.
+          //This helps reduce the script parsing time.
+          evalInstance.apply[Int]("1 + 1")
+        }
+
+        val pipedAlgoInput = getFlag[Boolean](flags, "--pipe") match {
+          case Some(true) =>
+            logger.info("Input Algorithm:")
+            val input = FileHelper.getStdInChunk.mkString("\n")
+            logger.info("Input received")
+            Some(input)
+          case _ => None
+        }
+
+        //Calculates the total length of dataset being tested
         await(StockLoader.loadSymbol("IBM"))
         val ibmStock = StockLoader.getStock("IBM")
-        val ibmDataSeq: Seq[LocalDate] = ibmStock._eodData.map(_.date)
+        val ibmDateSeq = ibmStock._eodData.map(_.date)
 
-        val startIndex = findClosestDateIndex(ibmDataSeq, startDate)
-        val endIndex = findClosestDateIndex(ibmDataSeq, endDate)
+        val startIndex = findClosestDateIndex(ibmDateSeq, startDate)
+        val endIndex = findClosestDateIndex(ibmDateSeq, endDate)
 
         //Sets the starting index in the eodData array.
         Stock.setCurrentDateIndex(startIndex)
         //Uses IBM as the baseline stock in terms of data length.
         //If a stock has less data length, then assumes the stock got listed later.
-        Stock.setTargetDataLength(ibmDataSeq.size)
-        logger.info(s"Loading data for ${Stock.targetDataLength - Stock.currentDateIndex} days")
+        Stock.setTargetDataLength(ibmDateSeq.size)
+        logger.info(s"Date range found for ${Stock.targetDataLength - Stock.currentDateIndex} days")
 
-        val algos = List(BuyOnGap, Benchmark)
+        logger.info(s"Loading algos..")
+
+        val parsedAlgos = algoFileNames.flatten.map { algoFileName =>
+          loadAlgoFromFile(s"/algorithms/$algoFileName.scala")
+        }
+
+        logger.info(pipedAlgoInput.toString)
+        val pipedAlgo = pipedAlgoInput.map(loadAlgoFromString)
+
+        val algos = parsedAlgos ++ pipedAlgo :+ Benchmark
+
+        logger.info(s"${algos.length} algos loaded")
+
         val initializeFuture = FutureHelper.traverseSequential(algos)(_.initialize())
         await(initializeFuture)
 
         logger.info("Successfully preloaded stocks")
-        val startingCash = 100000
+        val startingCash = 100000f
         var portfolioMap: Map[Algorithm, Portfolio] = algos.map(_ -> new Portfolio(startingCash)).toMap
+        var historicalValueMap: Map[Algorithm, Seq[(LocalDate, Float)]] = algos.map(_ -> Seq()).toMap
 
         while (Stock.currentDateIndex < endIndex) {
-          algos.filter(Stock.currentDateIndex >= _.minimumDataLength).foreach { algo =>
+          //Get algos which have enough data.
+          val activeAlgos = algos.filter(Stock.currentDateIndex >= _.minimumDataLength)
+
+          //Iterate through all active algos.
+          activeAlgos.foreach { algo =>
             val ctx = new TickHandlerContext(portfolioMap(algo))
             algo.tickHandler(ctx)
-            portfolioMap = portfolioMap + (algo -> ctx.currentPortfolio)
+            portfolioMap += (algo -> ctx.currentPortfolio)
           }
 
+          if (Stock.isFirstTickOfDay) {
+            //Track portfolio results end of every day.
+            activeAlgos.foreach { algo =>
+              val currentDate = ibmStock.getDate
+              val portfolioValue = portfolioMap(algo).totalValue
+              val newHistoricalData = historicalValueMap(algo) :+ (currentDate, portfolioValue)
+              historicalValueMap += (algo -> newHistoricalData)
+            }
+
+            //Log it to console every month.
+            if (ibmStock.getDate.getDayOfMonth == 1) {
+              logger.info(s"Portfolio Value ${ibmStock.getDate}:")
+
+              activeAlgos.foreach { algo =>
+                logger.info(f"${algo.name}: $$${historicalValueMap(algo).last._2}%1.2f")
+              }
+            }
+          }
+
+          //Finish and start next tick.
           Stock.incrementTicker()
         }
 
+        logger.info(s"Portfolio Final Value ${ibmStock.getDate}:")
+
         portfolioMap.foreach({ case (algo: Algorithm, portfolio: Portfolio) =>
-          logger.info(s"${algo.getClass.getName} final value: ${portfolio.totalValue}")
+          logger.info(f"${algo.name}: $$${portfolio.totalValue}%1.2f")
         })
 
         logger.info("Back test successful")
     }
   }
+  /**
+    * Evals an algorithm from the resources folder.
+    * @param filePath Resources file path of algorithm.
+    * @return Returns the parsed algorithm.
+    */
+  private def loadAlgoFromFile(filePath: String): Algorithm = {
+    val fileStream = getClass.getResourceAsStream(filePath)
+    val fileStr = scala.io.Source.fromInputStream(fileStream).mkString("\n")
 
+    loadAlgoFromString(fileStr)
+  }
+
+  private def loadAlgoFromString(str: String): Algorithm = {
+    try {
+      evalInstance.apply[Algorithm](str)
+    } catch {
+      case err: Throwable =>
+        logger.error("Cannot parse algo:", err)
+        throw err
+    }
+
+  }
   /**
     * Finds the index of the closest date, that is before or equal to targetDate, for the given date seq.
     * Returns 0 if no dates are before the targetDate.

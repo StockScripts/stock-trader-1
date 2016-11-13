@@ -1,13 +1,10 @@
-package com.effinggames.algorithms
-
-import com.effinggames.modules.backtest.{Stock, TickHandlerContext, InitContext, Algorithm}
+import com.effinggames.modules.backtest.{Algorithm, InitContext, TickHandlerContext}
 import com.effinggames.util.LoggerHelper.logger
 
-import scala.async.Async.{async, await}
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-object BuyOnGap extends Algorithm {
+new Algorithm {
+  override val name = "BuyOnGap"
   //Needs at least 91 days of data to operate
   override val minimumDataLength = 91
 

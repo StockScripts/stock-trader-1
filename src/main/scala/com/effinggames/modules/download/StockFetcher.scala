@@ -30,24 +30,24 @@ object StockFetcher {
   /**
     * Downloads all the stocks listed in the resources file.
     *
-    * @param fileNames List of file paths to get symbols from.
+    * @param filePaths List of file paths to get symbols from.
     * @param limit How many of the symbols to download.
     * @param skip How many of the symbols to skip.
     * @return
     */
   def downloadStocksFromResourceFiles(
-    fileNames: Seq[String],
+    filePaths: Seq[String],
     limit: Option[Int] = None,
     skip: Option[Int] = None
   ): Future[Seq[Try[RunBatchActionResult]]] = async {
     val limitNum = limit.getOrElse(Int.MaxValue)
     val skipNum = skip.getOrElse(0)
-    logger.info(s"Downloading stocks for ${fileNames.mkString(" ")}")
+    logger.info(s"Downloading stocks for ${filePaths.mkString(" ")}")
     logger.info(s"Limiting to $limitNum symbols, skipping $skipNum symbols")
 
     //Gets all the symbols from the files.
-    val symbols = fileNames.flatMap({ fileName =>
-      val fileStream = getClass.getResourceAsStream(fileName)
+    val symbols = filePaths.flatMap({ filePath =>
+      val fileStream = getClass.getResourceAsStream(filePath)
       scala.io.Source.fromInputStream(fileStream).getLines
     })
 

@@ -13,15 +13,15 @@ import scala.concurrent.{Future, blocking}
 object DownloadModule extends Module {
   val name = "Download"
   val triggerWord = "download"
-  val helpText = "download <stocks -clean true -limit 100 -skip 10> <userLists>"
+  val helpText = "download <stocks --clean true --limit 100 --skip 10> <userLists>"
 
   private val stockListDirectory = "/stockLists/"
   private val userListDirectory = "/userLists/"
 
   def run(command: String, flags: Seq[String]): Future[Unit] = async {
-    val limit = getFlag[Int](flags, "-limit")
-    val skip = getFlag[Int](flags, "-skip")
-    val clean = getFlag[Boolean](flags, "-clean")
+    val limit = getFlag[Int](flags, "--limit")
+    val skip = getFlag[Int](flags, "--skip")
+    val clean = getFlag[Boolean](flags, "--clean")
     command match {
       case "stocks" =>
         await(fetchStocks(clean, limit, skip).withLogFailure)

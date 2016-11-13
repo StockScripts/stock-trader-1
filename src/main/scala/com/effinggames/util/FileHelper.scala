@@ -1,10 +1,12 @@
 package com.effinggames.util
 
 import java.io.File
+import java.util.concurrent.{TimeUnit, Callable, Executors}
 import java.util.jar.JarFile
 
 import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
+import scala.util.{Failure, Success, Try}
 
 object FileHelper {
   /**
@@ -56,4 +58,26 @@ object FileHelper {
 
     results.sorted
   }
-}
+
+  /**
+    * Waits for StdIn input (blocking), accepts either 1 line or a copy pasted block.
+    * Source: http://stackoverflow.com/a/40433488/1836087
+    * @return Returns lines of user input.
+    */
+  def getStdInChunk: List[String] = {  // blocks until StdIn has data
+    val executor = Executors.newSingleThreadExecutor()
+      val callable = new Callable[String]() {
+        def call(): String = scala.io.StdIn.readLine()
+      }
+
+      def nextLine(acc: List[String]): List[String] =
+        Try {executor.submit(callable).get(50L, TimeUnit.MILLISECONDS)} match {
+          case Success(str) if str != null => nextLine(str :: acc)
+          case _ =>
+            executor.shutdownNow() // should test for Failure type
+            acc.reverse
+        }
+
+      nextLine(List(scala.io.StdIn.readLine()))  // this is the blocking part
+    }
+  }

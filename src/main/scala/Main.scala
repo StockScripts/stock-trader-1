@@ -1,4 +1,5 @@
 import com.effinggames.util.LoggerHelper.logger
+import com.effinggames.util.FutureHelper._
 import com.effinggames.modules.backtest.BacktestModule
 import com.effinggames.modules.download.DownloadModule
 
@@ -24,10 +25,7 @@ object Main {
       moduleList.find(_.triggerWord == argList.head) match {
         case Some(module) =>
           logger.info(s"Running ${module.name.capitalize} Module with: ${argList.drop(1).mkString(" ")}")
-          val moduleFuture = module.run(argList(1), argList.drop(2))
-          moduleFuture.onFailure {
-            case err => logger.warn(s"${module.name.capitalize} failed - $err")
-          }
+          val moduleFuture = module.run(argList(1), argList.drop(2)).withLogFailure
           Await.ready(moduleFuture, 1.hour)
         case _ => printHelp()
       }

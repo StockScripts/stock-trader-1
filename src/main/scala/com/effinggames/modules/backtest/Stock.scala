@@ -64,7 +64,7 @@ class Stock(eodData: IndexedSeq[EodData]) {
   //Give internal access of underlying eodData to backtest module
   private[backtest] val _eodData = eodData
   //If the stock was listed later, then will need to offset data start point.
-  val lengthOffset = Stock.targetDataLength - eodData.size
+  def lengthOffset = Stock.targetDataLength - eodData.size
   /**
     * Gets the index for the current day, offset by daysAgo.
     * @param daysAgo How many days ago to offset.

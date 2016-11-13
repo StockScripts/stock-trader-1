@@ -13,12 +13,12 @@ import scala.concurrent._
 
 object UserListParser {
 
-  def parseUserListFromResourceFile(fileName: String): Future[RunActionResult] = async {
-    logger.info(s"Parsing user list for $fileName")
-    val listName = fileName.split("/").last.split("[.]")(0).toUpperCase
+  def parseUserListFromResourceFile(filePath: String): Future[RunActionResult] = async {
+    logger.info(s"Parsing user list for $filePath")
 
-    val listStream = getClass.getResourceAsStream(fileName)
+    val listStream = getClass.getResourceAsStream(filePath)
     val symbols = scala.io.Source.fromInputStream(listStream).getLines.toVector.map(_.trim)
+    val listName = filePath.split("/").last.split("[.]")(0).toUpperCase
     val userList = UserList(listName, symbols)
 
     val insertQuery = quote {

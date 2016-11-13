@@ -3,7 +3,9 @@ package com.effinggames.modules.backtest
 import scala.concurrent.Future
 
 abstract class Algorithm {
-  //Overridable backtester hints.
+  //Overridable backtester configs.
+  //Name used for logging.
+  val name = "Unnamed Algo"
   //How many days of data the algo needs.
   val minimumDataLength = 0
 
