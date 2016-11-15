@@ -82,20 +82,20 @@ object StockFetcher {
       val csvLines = reader.allWithHeaders.reverse
       val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
       val eodDataList = csvLines.map(i => {
-        val adjustFactor = i("Adj Close").toFloat / i("Close").toFloat
+        val adjustFactor = i("Adj Close").toDouble / i("Close").toDouble
         //Adjusts and rounds the value
-        def getFormattedField(value: Float): Float = {
+        def getFormattedField(value: Double): Double = {
           MathHelper.roundDecimals(value * adjustFactor, 2)
         }
         EodData(
           symbol = formattedSymbol,
           date = LocalDate.parse(i("Date"), dateFormatter),
-          open = getFormattedField(i("Open").toFloat),
-          high = getFormattedField(i("High").toFloat),
-          low = getFormattedField(i("Low").toFloat),
-          close = getFormattedField(i("Close").toFloat),
+          open = getFormattedField(i("Open").toDouble),
+          high = getFormattedField(i("High").toDouble),
+          low = getFormattedField(i("Low").toDouble),
+          close = getFormattedField(i("Close").toDouble),
           volume = i("Volume").toLong,
-          adjClose = i("Adj Close").toFloat
+          adjClose = i("Adj Close").toDouble
         )
       })
 

@@ -1,11 +1,11 @@
 package com.effinggames.modules.backtest
 
 import java.time.format.{DateTimeFormatterBuilder, DateTimeFormatter}
-import java.time.temporal.ChronoField
+import java.time.temporal.{ChronoUnit, ChronoField}
 import java.time.{LocalDate, ZoneId}
 
 import com.effinggames.modules.Module
-import com.effinggames.util.{FileHelper, FutureHelper}
+import com.effinggames.util.{MathHelper, FileHelper, FutureHelper}
 import com.effinggames.util.LoggerHelper.logger
 import com.twitter.util.Eval
 
@@ -85,7 +85,6 @@ object BacktestModule extends Module {
           loadAlgoFromFile(s"/algorithms/$algoFileName.scala")
         }
 
-        logger.info(pipedAlgoInput.toString)
         val pipedAlgo = pipedAlgoInput.map(loadAlgoFromString)
 
         val algos = parsedAlgos ++ pipedAlgo :+ Benchmark
@@ -98,7 +97,8 @@ object BacktestModule extends Module {
         logger.info("Successfully preloaded stocks")
         val startingCash = 100000f
         var portfolioMap: Map[Algorithm, Portfolio] = algos.map(_ -> new Portfolio(startingCash)).toMap
-        var historicalValueMap: Map[Algorithm, Seq[(LocalDate, Float)]] = algos.map(_ -> Seq()).toMap
+        //Maps algorithms to a Seq[(date, totalPortfolioValue)], for tracking algo returns.
+        var historicalValueMap: Map[Algorithm, Vector[(LocalDate, Double)]] = algos.map(_ -> Vector()).toMap
 
         while (Stock.currentDateIndex < endIndex) {
           //Get algos which have enough data.
@@ -134,11 +134,65 @@ object BacktestModule extends Module {
           Stock.incrementTicker()
         }
 
-        logger.info(s"Portfolio Final Value ${ibmStock.getDate}:")
+        //Log results for each algo.
+        algos.foreach { algo =>
+          println()
+          logger.info(s"${algo.name} Final Stats ($startDate to ${ibmStock.getDate}):")
+          val historicalValues = historicalValueMap(algo).map(_._2)
+          //Calc annualized return
+          val durationYears = ChronoUnit.DAYS.between(startDate, endDate) / 365
+          val absoluteReturns = historicalValues.last / startingCash
+          val annReturns = math.pow(absoluteReturns, 1d / durationYears.toDouble) - 1
+          //Calc volatility (std deviation)
+          val dailyPercentageReturns = historicalValues.sliding(2).map {
+            case Vector(prev, current) =>
+              (current - prev) / prev
+          }.toVector
+          val annVolatility = MathHelper.stdDeviation(dailyPercentageReturns) * Math.sqrt(252)
+          //Calc max drawdown
+          def calcDrawdown(values: Seq[Double]): Double = {
+            var peakValue = 0.01d
+            var maxDrawdown = 0d
+            values.foreach { totalValue =>
+              val returnsFromPeak = (totalValue - peakValue) / peakValue
+              if (returnsFromPeak < maxDrawdown) {
+                maxDrawdown = returnsFromPeak
+              }
+              if (totalValue > peakValue) {
+                peakValue = totalValue
+              }
+            }
+            -maxDrawdown
+          }
+          val maxDrawdown = calcDrawdown(historicalValues)
+          //Calc sharpe ratio
+          val riskFreeReturn = 0.01
+          val sharpeRatio = (annReturns - riskFreeReturn) / annVolatility
+          //Calc sortino ratio
+          val targetReturnRate = riskFreeReturn
+          val negativeDailyReturns = dailyPercentageReturns.filter(_ <= 0)
+          val negativeAnnVolatilty = MathHelper.stdDeviation(negativeDailyReturns) * Math.sqrt(252)
+          val sortinoRatio = (annReturns - riskFreeReturn) / negativeAnnVolatilty
+          //Calc calmar ratio (3 years)
+          val calmarRatio = if (historicalValues.length >= 252 * 3) {
+            val threeYearReturns = historicalValues.takeRight(252 * 3)
+            val absoluteReturns = threeYearReturns.last / threeYearReturns.head
+            val annReturns = math.pow(absoluteReturns, 1d / 3d) - 1
+            val maxDrawdown = calcDrawdown(threeYearReturns)
+            val calmarRatio = annReturns / maxDrawdown
+            Some(calmarRatio)
+          } else {
+            None
+          }
 
-        portfolioMap.foreach({ case (algo: Algorithm, portfolio: Portfolio) =>
-          logger.info(f"${algo.name}: $$${portfolio.totalValue}%1.2f")
-        })
+          logger.info(f"Total Value: $$${MathHelper.roundDecimals(historicalValues.last, 2)}%1.2f")
+          logger.info(s"Ann Returns: ${MathHelper.roundDecimals(annReturns * 100d, 2)}%")
+          logger.info(s"Ann Volatility: ${MathHelper.roundDecimals(annVolatility * 100d, 2)}%")
+          logger.info(s"Max drawdown: ${MathHelper.roundDecimals(maxDrawdown * 100d, 2)}%")
+          logger.info(s"Sharpe Ratio: ${MathHelper.roundDecimals(sharpeRatio, 3)}")
+          logger.info(s"Sortino Ratio: ${MathHelper.roundDecimals(sortinoRatio, 3)}")
+          logger.info(s"Calmar Ratio: ${if (calmarRatio.isDefined) MathHelper.roundDecimals(calmarRatio.get, 3) else "N/A"}")
+        }
 
         logger.info("Back test successful")
     }
@@ -150,7 +204,7 @@ object BacktestModule extends Module {
     */
   private def loadAlgoFromFile(filePath: String): Algorithm = {
     val fileStream = getClass.getResourceAsStream(filePath)
-    val fileStr = scala.io.Source.fromInputStream(fileStream).mkString("\n")
+    val fileStr = scala.io.Source.fromInputStream(fileStream).mkString
 
     loadAlgoFromString(fileStr)
   }

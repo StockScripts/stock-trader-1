@@ -71,7 +71,7 @@ object FileHelper {
       }
 
       def nextLine(acc: List[String]): List[String] =
-        Try {executor.submit(callable).get(50L, TimeUnit.MILLISECONDS)} match {
+        Try {executor.submit(callable).get(10L, TimeUnit.MILLISECONDS)} match {
           case Success(str) if str != null => nextLine(str :: acc)
           case _ =>
             executor.shutdownNow() // should test for Failure type

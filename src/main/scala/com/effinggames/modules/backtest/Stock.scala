@@ -79,7 +79,7 @@ class Stock(eodData: IndexedSeq[EodData]) {
   def isListed: Boolean = getOpen() != -1
 
   //Gets the current price, the close price if end of day, or the open price otherwise.
-  def getPrice: Float = {
+  def getPrice: Double = {
     if (Stock.isLastTickOfDay) {
       getClose()
     } else {
@@ -95,16 +95,16 @@ class Stock(eodData: IndexedSeq[EodData]) {
       case None => LocalDate.ofEpochDay(0)
     }
   }
-  def getOpen: Float = getOpen()
-  def getOpen(daysAgo: Int = 0): Float = {
+  def getOpen: Double = getOpen()
+  def getOpen(daysAgo: Int = 0): Double = {
     require(daysAgo >= 0, "daysAgo must be a non-negative.")
     eodData.lift(getDataIndex(daysAgo)) match {
       case Some(data) => data.open
       case None => -1
     }
   }
-  def getClose: Float = getClose()
-  def getClose(daysAgo: Int = 0): Float = {
+  def getClose: Double = getClose()
+  def getClose(daysAgo: Int = 0): Double = {
     require(daysAgo >= 0, "daysAgo must be a non-negative.")
     require(!(daysAgo == 0 && !Stock.isLastTickOfDay), "No looking in the future. DaysAgo must be > 0 if day has not ended.")
     eodData.lift(getDataIndex(daysAgo)) match {
@@ -112,8 +112,8 @@ class Stock(eodData: IndexedSeq[EodData]) {
       case None => -1
     }
   }
-  def getLow: Float = getLow()
-  def getLow(daysAgo: Int = 0): Float = {
+  def getLow: Double = getLow()
+  def getLow(daysAgo: Int = 0): Double = {
     require(daysAgo >= 0, "daysAgo must be a non-negative.")
     require(!(daysAgo == 0 && !Stock.isLastTickOfDay), "No looking in the future. DaysAgo must be > 0 if day has not ended.")
     eodData.lift(getDataIndex(daysAgo)) match {
@@ -121,8 +121,8 @@ class Stock(eodData: IndexedSeq[EodData]) {
       case None => -1
     }
   }
-  def getHigh: Float = getHigh()
-  def getHigh(daysAgo: Int = 0): Float = {
+  def getHigh: Double = getHigh()
+  def getHigh(daysAgo: Int = 0): Double = {
     require(daysAgo >= 0, "daysAgo must be a non-negative.")
     require(!(daysAgo == 0 && !Stock.isLastTickOfDay), "No looking in the future. DaysAgo must be > 0 if day has not ended.")
     eodData.lift(getDataIndex(daysAgo)) match {
@@ -141,7 +141,7 @@ class Stock(eodData: IndexedSeq[EodData]) {
   }
 
   //Gets the simple moving average over X days.
-  def getSMA(overHowManyDays: Int, daysAgo: Int = 0): Float = {
+  def getSMA(overHowManyDays: Int, daysAgo: Int = 0): Double = {
     require(daysAgo >= 0, "daysAgo must be a non-negative.")
     require(!(daysAgo == 0 && !Stock.isLastTickOfDay), "No looking in the future. DaysAgo must be > 0 if day has not ended.")
     val closeValues = (0 until overHowManyDays).map(i => getClose(i + daysAgo))
@@ -149,7 +149,7 @@ class Stock(eodData: IndexedSeq[EodData]) {
   }
 
   //Standard deviation of close to close change over X days.
-  def getDailySD(overHowManyDays: Int, daysAgo: Int = 0): Float = {
+  def getDailySD(overHowManyDays: Int, daysAgo: Int = 0): Double = {
     require(daysAgo >= 0, "daysAgo must be a non-negative.")
     require(!(daysAgo == 0 && !Stock.isLastTickOfDay), "No looking in the future. DaysAgo must be > 0 if day has not ended.")
     val dailyChangeValues = (0 until overHowManyDays).map(i => {

@@ -1,17 +1,17 @@
 package com.effinggames.modules.backtest
 
-class Portfolio(_cash: Float, positionMap: Map[Stock, Position] = Map()) {
-  def floatingCash: Float = _cash
+class Portfolio(_cash: Double, positionMap: Map[Stock, Position] = Map()) {
+  def floatingCash: Double = _cash
 
   //Gets the total market value of a seq of positions.
-  private def calcPositionsValue(positions: Seq[Position]): Float = positions.foldLeft(0f){
+  private def calcPositionsValue(positions: Seq[Position]): Double = positions.foldLeft(0d){
     case (total, position) =>
       total + position.quantity * position.stock.getPrice
   }
 
-  def positionsValue: Float = calcPositionsValue(positionMap.values.toSeq)
+  def positionsValue: Double = calcPositionsValue(positionMap.values.toSeq)
 
-  def totalValue: Float = floatingCash + positionsValue
+  def totalValue: Double = floatingCash + positionsValue
 
   def positions: Map[Stock, Position] = positionMap
 
@@ -51,5 +51,5 @@ class Portfolio(_cash: Float, positionMap: Map[Stock, Position] = Map()) {
 case class Position (
   stock: Stock,
   quantity: Int,
-  costBasis: Float
+  costBasis: Double
 )

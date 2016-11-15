@@ -6,12 +6,12 @@ object SharedModels {
   case class EodData(
     symbol: String,
     date: LocalDate,
-    open: Float,
-    high: Float,
-    low: Float,
-    close: Float,
+    open: Double,
+    high: Double,
+    low: Double,
+    close: Double,
     volume: Long,
-    adjClose: Float
+    adjClose: Double
   )
   case class UserList(
     name: String,
