@@ -1,17 +1,20 @@
 package com.effinggames.modules.backtest
 
-import java.time.format.{DateTimeFormatterBuilder, DateTimeFormatter}
+import java.time.format.DateTimeFormatterBuilder
 import java.time.temporal.{ChronoUnit, ChronoField}
-import java.time.{LocalDate, ZoneId}
+import java.time.{LocalDateTime, LocalDate, ZoneId}
 
 import com.effinggames.modules.Module
-import com.effinggames.util.{MathHelper, FileHelper, FutureHelper}
+import com.effinggames.modules.SharedModels.AlgoResult
+import com.effinggames.util.{RandomHelper, MathHelper, FileHelper, FutureHelper}
 import com.effinggames.util.LoggerHelper.logger
+import com.effinggames.util.DatabaseHelper._
 import com.twitter.util.Eval
 
 import scala.async.Async.{async, await}
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{Future, blocking}
+import scala.util.Random
 
 object BacktestModule extends Module {
   val name = "Backtest"
@@ -135,9 +138,12 @@ object BacktestModule extends Module {
         }
 
         //Log results for each algo.
-        algos.foreach { algo =>
+        val currentDate = LocalDateTime.now()
+        val backtestId = RandomHelper.randomString(7)
+        val results = algos.map { algo =>
           println()
           logger.info(s"${algo.name} Final Stats ($startDate to ${ibmStock.getDate}):")
+          val historicalDates = historicalValueMap(algo).map(_._1)
           val historicalValues = historicalValueMap(algo).map(_._2)
           //Calc annualized return
           val durationYears = ChronoUnit.DAYS.between(startDate, endDate) / 365
@@ -191,9 +197,29 @@ object BacktestModule extends Module {
           logger.info(s"Max drawdown: ${MathHelper.roundDecimals(maxDrawdown * 100d, 2)}%")
           logger.info(s"Sharpe Ratio: ${MathHelper.roundDecimals(sharpeRatio, 3)}")
           logger.info(s"Sortino Ratio: ${MathHelper.roundDecimals(sortinoRatio, 3)}")
-          logger.info(s"Calmar Ratio: ${if (calmarRatio.isDefined) MathHelper.roundDecimals(calmarRatio.get, 3) else "N/A"}")
+          logger.info(s"Calmar Ratio (3 yr): ${if (calmarRatio.isDefined) MathHelper.roundDecimals(calmarRatio.get, 3) else "N/A"}")
+          AlgoResult(
+            algoName = algo.name,
+            date = currentDate,
+            annReturns = annReturns,
+            annVolatility = annVolatility,
+            maxDrawdown = maxDrawdown,
+            sharpe = sharpeRatio,
+            sortino = sortinoRatio,
+            calmar = calmarRatio,
+            historicalValues = historicalValues,
+            historicalDates = historicalDates,
+            backtestId = backtestId
+          )
         }
-
+        logger.info("Saving results")
+        import stockDB._
+        val insertQuery = quote {
+          liftQuery(results.toList).foreach(i => query[AlgoResult].insert(i))
+        }
+        blocking {
+          stockDB.run(insertQuery)
+        }
         logger.info("Back test successful")
     }
   }

@@ -12,20 +12,20 @@ import scala.concurrent.ExecutionContext.Implicits.global
   * Handles the command line commands and loads the different modules.
   */
 object Main {
-  private val moduleList = List(BacktestModule, DownloadModule)
-  private def printHelp(): Unit = moduleList.map(i => s"${i.name.capitalize} Usage: ${i.helpText}").foreach(println)
+  private val modules = Seq(BacktestModule, DownloadModule)
+  private def printHelp(): Unit = modules.map(i => s"${i.name.capitalize} Usage: ${i.helpText}").foreach(println)
 
-  def main(args: Array[String]) {
-    if (args.length == 0) {
+  def main(_args: Array[String]) {
+    if (_args.length == 0) {
       printHelp()
     } else {
-      val argList = args.toVector
+      val args = _args.toVector
 
       //Runs the modules that match the trigger word, and passes the remaining args.
-      moduleList.find(_.triggerWord == argList.head) match {
+      modules.find(_.triggerWord == args.head) match {
         case Some(module) =>
-          logger.info(s"Running ${module.name.capitalize} Module with: ${argList.drop(1).mkString(" ")}")
-          val moduleFuture = module.run(argList(1), argList.drop(2)).withLogFailure
+          logger.info(s"Running ${module.name.capitalize} Module with: ${args.drop(1).mkString(" ")}")
+          val moduleFuture = module.run(args(1), args.drop(2)).withLogFailure
           Await.ready(moduleFuture, 1.hour)
         case _ => printHelp()
       }

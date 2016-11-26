@@ -32,7 +32,7 @@ object StockLoader {
     logger.info(s"Fetching data for symbol: $symbol")
 
     val fetchQuery = quote {
-      query[EodData].filter(_.symbol == lift(symbol))
+      query[EodData].filter(_.symbol == lift(symbol)).sortBy(_.date)
     }
 
     val results = blocking {

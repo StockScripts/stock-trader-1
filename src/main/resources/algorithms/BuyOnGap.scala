@@ -26,7 +26,7 @@ new Algorithm {
         val gapPercentage = overnightChange / stock.getClose(1)
         gapPercentage
       }).reverse.take(100)
-
+2
 //      logger.debug("BuyOnGap buys: " + biggestLosers.size)
 
       //Buys an equal dollar amount of each stock.

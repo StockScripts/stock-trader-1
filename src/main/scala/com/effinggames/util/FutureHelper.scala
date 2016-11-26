@@ -1,5 +1,7 @@
 package com.effinggames.util
 
+import java.io.{PrintWriter, StringWriter}
+
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.Try
@@ -36,7 +38,7 @@ object FutureHelper {
 
   implicit class FutureWithTrying[A](self: Future[A])(implicit ec: ExecutionContext) {
     /**
-      * Converts the Future to a Try[Future].
+      * Converts the Future[A] to a Future[Try{A}].
       * @return Returns the future wrapped in a try.
       */
     def toTry(implicit ec: ExecutionContext): Future[Try[A]] = {
@@ -54,7 +56,11 @@ object FutureHelper {
       */
     def withLogFailure: Future[A] = {
       self.onFailure {
-        case err => logger.warn(s"Future failed - $err")
+        case err =>
+          //Uses StringWriter to format stack trace nicer.
+          val sw = new StringWriter
+          err.printStackTrace(new PrintWriter(sw))
+          logger.error(s"Future failed - ${sw.toString.split("\\n").dropRight(1).mkString("\n")}")
       }
       self
     }
