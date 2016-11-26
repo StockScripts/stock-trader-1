@@ -27,7 +27,7 @@ new Algorithm {
         gapPercentage
       }).reverse.take(100)
 
-//      logger.debug("BuyOnGap buys: " + biggestLosers.size)
+      //logger.debug("BuyOnGap buys: " + biggestLosers.size)
 
       //Buys an equal dollar amount of each stock.
       val fundsPerOrder = ctx.portfolio.floatingCash / biggestLosers.size

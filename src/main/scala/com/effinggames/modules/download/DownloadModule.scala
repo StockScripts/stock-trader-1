@@ -24,9 +24,9 @@ object DownloadModule extends Module {
     val clean = getFlag[Boolean](flags, "--clean")
     command match {
       case "stocks" =>
-        await(fetchStocks(clean, limit, skip).withLogFailure)
+        await(fetchStocks(clean, limit, skip))
       case "userLists" =>
-        await(parseUserLists().withLogFailure)
+        await(parseUserLists())
     }
   }
 
@@ -45,7 +45,7 @@ object DownloadModule extends Module {
     val filePaths = FileHelper.getFilePathsInDirectory(stockListDirectory)
       .filter(isCorrectFormat)
 
-    await(StockFetcher.downloadStocksFromResourceFiles(filePaths, limit, skip).withLogFailure)
+    await(StockFetcher.downloadStocksFromResourceFiles(filePaths, limit, skip))
   }
 
   private def parseUserLists(): Future[Unit] = async {
@@ -57,7 +57,7 @@ object DownloadModule extends Module {
       .filter(isCorrectFormat)
 
     await(FutureHelper.traverseSequential(filePaths)( filePath => {
-      UserListParser.parseUserListFromResourceFile(filePath).withLogFailure
+      UserListParser.parseUserListFromResourceFile(filePath)
     }))
   }
 }

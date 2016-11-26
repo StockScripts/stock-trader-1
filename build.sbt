@@ -26,4 +26,4 @@ libraryDependencies ++= Seq(
 
 enablePlugins(JavaAppPackaging)
 
-compile <<= (compile in Compile) dependsOn flywayMigrate
+compile := ((compile in Compile) dependsOn flywayMigrate).value
