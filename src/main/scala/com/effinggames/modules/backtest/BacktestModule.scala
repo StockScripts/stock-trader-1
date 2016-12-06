@@ -5,11 +5,14 @@ import java.time.temporal.{ChronoUnit, ChronoField}
 import java.time.{LocalDateTime, LocalDate, ZoneId}
 
 import com.effinggames.modules.Module
-import com.effinggames.modules.SharedModels.AlgoResult
+import com.effinggames.modules.SharedModels.{Backtest, AlgoResult}
 import com.effinggames.util.{RandomHelper, MathHelper, FileHelper, FutureHelper}
 import com.effinggames.util.LoggerHelper.logger
 import com.effinggames.util.DatabaseHelper._
+import com.effinggames.util.DatabaseHelper.stockDB._
+
 import com.twitter.util.Eval
+import com.typesafe.config.ConfigFactory
 
 import scala.async.Async.{async, await}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -138,9 +141,7 @@ object BacktestModule extends Module {
         }
 
         //Log results for each algo.
-        val currentDate = LocalDateTime.now()
-        val backtestId = RandomHelper.randomString(7)
-        val results = algos.map { algo =>
+        val algoResults = algos.map { algo =>
           println()
           logger.info(s"${algo.name} Final Stats ($startDate to ${ibmStock.getDate}):")
           val historicalDates = historicalValueMap(algo).map(_._1)
@@ -200,7 +201,6 @@ object BacktestModule extends Module {
           logger.info(s"Calmar Ratio (3 yr): ${if (calmarRatio.isDefined) MathHelper.roundDecimals(calmarRatio.get, 3) else "N/A"}")
           AlgoResult(
             algoName = algo.name,
-            date = currentDate,
             annReturns = annReturns,
             annVolatility = annVolatility,
             maxDrawdown = maxDrawdown,
@@ -208,18 +208,35 @@ object BacktestModule extends Module {
             sortino = sortinoRatio,
             calmar = calmarRatio,
             historicalValues = historicalValues,
-            historicalDates = historicalDates,
-            backtestId = backtestId
+            historicalDates = historicalDates
           )
         }
-        logger.info(s"Saving results with backtest id: $backtestId")
-        import stockDB._
-        val insertQuery = quote {
-          liftQuery(results.toList).foreach(i => query[AlgoResult].insert(i))
-        }
+        logger.info(s"Saving results")
+        val currentDate = LocalDateTime.now()
+        val displayId = RandomHelper.randomString(7)
+
         blocking {
-          stockDB.run(insertQuery)
+          stockDB.transaction {
+            //Inserts the backtest and gets the id.
+            val backtest = Backtest(currentDate, displayId)
+            val backtestInsert = quote {
+              query[Backtest].insert(lift(backtest)).returning(_.id)
+            }
+            val backtestId = stockDB.run(backtestInsert)
+
+            //Inserts the algo results with the backtest id.
+            val resultsWithId = algoResults.map(_.copy(backtestId = backtestId))
+            val algoResultInsert = quote {
+              liftQuery(resultsWithId.toList).foreach(i => query[AlgoResult].insert(i))
+            }
+            stockDB.run(algoResultInsert)
+          }
         }
+
+
+        val conf = ConfigFactory.load()
+        val chartViewerUrl = conf.getString("app.chartViewerUrl")
+        logger.info(s"Results saved: $chartViewerUrl$displayId")
         logger.info("Back test successful")
     }
   }

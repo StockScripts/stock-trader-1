@@ -15,9 +15,13 @@ object SharedModels {
     volume: Long,
     adjClose: Double
   )
+  case class Backtest(
+    date: LocalDateTime,
+    displayId: String,
+    id: Option[Int] = None
+  )
   case class AlgoResult(
     algoName: String,
-    date: LocalDateTime,
     annReturns: Double,
     annVolatility: Double,
     maxDrawdown: Double,
@@ -26,7 +30,7 @@ object SharedModels {
     calmar: Option[Double],
     historicalValues: Seq[Double],
     historicalDates: Seq[LocalDate],
-    backtestId: String = "foobar"
+    backtestId: Option[Int] = None
   )
   case class UserList(
     name: String,

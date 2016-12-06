@@ -21,7 +21,8 @@ libraryDependencies ++= Seq(
   "com.typesafe.play" %% "play-ws" % "2.4.3",
   "org.scala-lang.modules" %% "scala-async" % "0.9.5",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0",
-  "com.twitter" % "util-eval_2.11" % "6.38.0"
+  "com.twitter" % "util-eval_2.11" % "6.38.0",
+  "com.typesafe" % "config" % "1.3.1"
 )
 
 enablePlugins(JavaAppPackaging)
