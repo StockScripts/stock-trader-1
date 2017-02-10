@@ -5,7 +5,7 @@ import java.time.temporal.{ChronoUnit, ChronoField}
 import java.time.{LocalDateTime, LocalDate, ZoneId}
 
 import com.effinggames.modules.Module
-import com.effinggames.modules.SharedModels.{Backtest, AlgoResult}
+import com.effinggames.modules.sharedModels.{Backtest, AlgoResult}
 import com.effinggames.util.{RandomHelper, MathHelper, FileHelper, FutureHelper}
 import com.effinggames.util.LoggerHelper.logger
 import com.effinggames.util.DatabaseHelper._
@@ -17,7 +17,6 @@ import com.typesafe.config.ConfigFactory
 import scala.async.Async.{async, await}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, blocking}
-import scala.util.Random
 
 object BacktestModule extends Module {
   val name = "Backtest"
@@ -213,26 +212,25 @@ object BacktestModule extends Module {
         }
         logger.info(s"Saving results")
         val currentDate = LocalDateTime.now()
-        val displayId = RandomHelper.randomString(7)
+        val displayId = RandomHelper.randomString(20)
 
-        blocking {
-          stockDB.transaction {
-            //Inserts the backtest and gets the id.
-            val backtest = Backtest(currentDate, displayId)
-            val backtestInsert = quote {
-              query[Backtest].insert(lift(backtest)).returning(_.id)
-            }
-            val backtestId = stockDB.run(backtestInsert)
+        stockDB.transaction {
+          //Inserts the backtest and gets the id.
+          val backtest = Backtest(currentDate, displayId)
+          val backtestInsert = quote {
+            query[Backtest].insert(lift(backtest)).returning(_.id)
+          }
+          val backtestId = stockDB.run(backtestInsert)
 
-            //Inserts the algo results with the backtest id.
-            val resultsWithId = algoResults.map(_.copy(backtestId = backtestId))
-            val algoResultInsert = quote {
-              liftQuery(resultsWithId.toList).foreach(i => query[AlgoResult].insert(i))
-            }
+          //Inserts the algo results with the backtest id.
+          val resultsWithId = algoResults.map(_.copy(backtestId = backtestId))
+          val algoResultInsert = quote {
+            liftQuery(resultsWithId.toList).foreach(i => query[AlgoResult].insert(i))
+          }
+          blocking {
             stockDB.run(algoResultInsert)
           }
         }
-
 
         val conf = ConfigFactory.load()
         val chartViewerUrl = conf.getString("app.chartViewerUrl")

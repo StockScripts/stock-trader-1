@@ -2,8 +2,8 @@ package com.effinggames.modules.backtest
 
 import java.time.LocalDate
 
-import com.effinggames.modules.SharedModels
-import SharedModels.EodData
+import com.effinggames.modules.sharedModels
+import sharedModels.EodData
 import com.effinggames.util.MathHelper
 
 //Stock companion object for tracking the global eodData index, and intraday tick counts.

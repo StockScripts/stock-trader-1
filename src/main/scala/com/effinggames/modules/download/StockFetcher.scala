@@ -3,13 +3,13 @@ package com.effinggames.modules.download
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.Executors
-import com.effinggames.modules.SharedModels
+import com.effinggames.modules.sharedModels
 import com.effinggames.util.{MathHelper, DatabaseHelper, LoggerHelper, FutureHelper}
 import FutureHelper._
 import DatabaseHelper.stockDB
 import DatabaseHelper.stockDB._
 import LoggerHelper.logger
-import SharedModels.EodData
+import sharedModels.EodData
 
 import com.github.tototoshi.csv.CSVReader
 import play.api.libs.ws.ning.NingWSClient
@@ -29,7 +29,6 @@ object StockFetcher {
 
   /**
     * Downloads all the stocks listed in the resources file.
-    *
     * @param filePaths List of file paths to get symbols from.
     * @param limit How many of the symbols to download.
     * @param skip How many of the symbols to skip.

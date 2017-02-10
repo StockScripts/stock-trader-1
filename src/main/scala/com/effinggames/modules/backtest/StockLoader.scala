@@ -3,14 +3,14 @@ package com.effinggames.modules.backtest
 
 import java.util.concurrent.Executors
 
-import com.effinggames.modules.SharedModels
+import com.effinggames.modules.sharedModels
 
 import scala.async.Async._
 import scala.concurrent.{ExecutionContext, Await, Future, blocking}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
-import SharedModels.{UserList, EodData}
+import sharedModels.{UserList, EodData}
 import com.effinggames.util.LoggerHelper.logger
 import com.effinggames.util.DatabaseHelper._
 import com.effinggames.util.DatabaseHelper.stockDB._

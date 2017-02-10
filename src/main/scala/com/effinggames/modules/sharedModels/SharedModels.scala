@@ -1,8 +1,6 @@
-package com.effinggames.modules.SharedModels
+package com.effinggames.modules.sharedModels
 
-import java.time.{LocalDateTime, LocalDate}
-
-import scala.util.Random
+import java.time.{LocalDate, LocalDateTime}
 
 //Database Model
 case class EodData(
